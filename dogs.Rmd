@@ -1,0 +1,68 @@
+---
+title: "Soviet dogs in space"
+author: "Davide Fucci"
+date: "`r Sys.Date()`"
+output: rmarkdown::github_document
+---
+The [data](https://airtable.com/universe/expG3z2CFykG1dZsp/sovet-space-dogs) is provided by [Duncan Geere](www.twitter.com/duncangeer). It is a database of dogs that flew on space missions based on the book _Soviet Space Dogs._
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(lubridate)
+library(janitor)
+library(ggforce)
+library(ggtext)
+```
+
+Loading basic things. Beside tidyverse, lubridate helps to work with dates, janitor helps linting dataframes, whereas ggforce and ggtext put ggplot on steroids. 
+
+```{r}
+library(airtabler)
+
+spacedogs <- 
+  airtable(
+    base = "", 
+    tables = c("Dogs", "FLIGHTS")
+  )
+```
+
+
+```{r message=FALSE, warning=FALSE, paged.print=FALSE}
+
+
+dogs <- 
+  spacedogs$Dogs$select()
+
+flights <- spacedogs$FLIGHTS$select()
+```
+
+
+The Dogs dataframe is the most important, contains name of the dogs, gender, and they flight they were on. The flight table contains additional information on the flight (most importantly, altitute).
+
+```{r}
+dogs_tidy <- dogs %>% 
+  clean_names() %>% 
+  mutate(
+         date_death = case_when(str_sub(fate, 1, 4) == "Died" ~ str_sub(fate, 6, 15)),
+         date_death = ymd(date_death)) %>% 
+  select(-notes, -fate, -flights)
+```
+
+Tidy up the dogs dataframe, linting the column names to use camel case (`clean_names()`), separate multiple flights in the same cell over several columns, and parse dates. Finally, remove unimportant columns.
+
+```{r message=FALSE, warning=FALSE, paged.print=FALSE}
+flights_tidy <- flights %>% 
+  clean_names() %>% 
+  select(date_flight = date, rocket, altitude_km, result, notes_flight = notes) %>% 
+  filter(altitude_km != "unknown") %>% 
+  mutate(altitude = case_when(str_detect(altitude_km, "^[0-9]") ~ parse_number(altitude_km), 
+                              str_detect(altitude_km, "orbital") ~ 2000))  # 2000 km is the terrestrial orbit altitude according to Wikipedia
+```
+Same for cleaning for flights. Important thing to do here is to parse altitude, as sometimes contains an integer value (in km), other times the string _orbital_, and other times _unknown_ (which are filtered out).
+
+
+H\\T to David Smale for how to clean this dataset. Check his other [awesome visualization](https://davidsmale.netlify.app/portfolio/soviet-space-dogs-part-2/) of Soviet Dogs in Space. 
+
+
+
+

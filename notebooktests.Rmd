@@ -1,0 +1,25 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+
+
+```{r}
+library(airtabler)
+
+ScienceTalksList <- 
+  airtable(
+    base = "", 
+    tables = c("Talks", "Speakers")
+  )
+```
+
+```{r}
+talks <- 
+  ScienceTalksList$Talks$select()
+
+knitr::kable(talks[, c("Name", "Speaker", "Affiliation", "Date / Time")], format = "markdown")
+```
+
+
